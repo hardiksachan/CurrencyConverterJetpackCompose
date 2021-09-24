@@ -16,7 +16,7 @@ interface IHomePageUI {
         val error: StateFlow<String?>
     }
 
-    interface Effect {
+    interface EffectHandler {
         fun showToast(message: String)
         fun receiveBaseCurrency(callback: suspend (Currency) -> Unit)
         fun receiveTargetCurrency(callback: suspend (Currency) -> Unit)

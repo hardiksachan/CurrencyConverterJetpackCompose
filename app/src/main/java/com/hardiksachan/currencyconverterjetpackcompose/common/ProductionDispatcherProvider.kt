@@ -4,11 +4,11 @@ import kotlinx.coroutines.Dispatchers
 import kotlin.coroutines.CoroutineContext
 
 object ProductionDispatcherProvider : DispatcherProvider {
-    override fun provideUIContext(): CoroutineContext {
+    override fun UI(): CoroutineContext {
         return Dispatchers.Main
     }
 
-    override fun provideIOContext(): CoroutineContext {
+    override fun IO(): CoroutineContext {
         return Dispatchers.IO
     }
 

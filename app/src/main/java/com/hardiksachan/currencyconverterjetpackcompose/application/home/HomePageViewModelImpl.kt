@@ -11,11 +11,12 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import kotlin.coroutines.CoroutineContext
 
 class HomePageViewModelImpl(
     private val repository: ICurrencyRepository,
-    private val effectHandler: IHomePageUI.Effect,
+    private val effectHandler: IHomePageUI.EffectHandler,
     private val dispatcherProvider: DispatcherProvider
 ) : BaseLogic<HomePageEvent>(),
     IHomePageUI.State,
@@ -39,14 +40,14 @@ class HomePageViewModelImpl(
         }
 
     override val coroutineContext: CoroutineContext
-        get() = jobTracker + dispatcherProvider.provideUIContext()
+        get() = jobTracker + dispatcherProvider.UI()
 
     init {
         jobTracker = Job()
     }
 
     override fun onEvent(event: HomePageEvent) {
-        launch(dispatcherProvider.provideIOContext()) {
+        launch {
             when (event) {
                 HomePageEvent.BaseCurrencyChangeRequested -> handleBaseCurrencyChangeRequested()
                 is HomePageEvent.BaseCurrencyDisplayTextChanged -> handleBaseCurrencyDisplayTextChanged(
@@ -77,18 +78,22 @@ class HomePageViewModelImpl(
     private suspend fun handleEvaluatePressed() {
         isLoading.emit(true)
 
-        val response = repository.getConversionFactor(
-            baseCurrency = baseCurrency.value,
-            targetCurrency = targetCurrency.value
-        )
+        val response = withContext(dispatcherProvider.IO()) {
+            repository.getConversionFactor(
+                baseCurrency = baseCurrency.value,
+                targetCurrency = targetCurrency.value
+            )
+        }
 
         when (response) {
             is ResultWrapper.Failure -> error.emit(response.error.message)
             is ResultWrapper.Success -> targetDisplay = baseDisplay * response.result.rate
         }
 
+
         isLoading.emit(false)
     }
+
 
     private fun handleBaseCurrencyDisplayTextChanged(text: String) {
         try {
@@ -112,7 +117,7 @@ class HomePageViewModelImpl(
     }
 
 
-    // Regarding UI State
+// Regarding UI State
 
     override val baseCurrency: MutableStateFlow<Currency> = MutableStateFlow(usdCurrency)
     override val targetCurrency: MutableStateFlow<Currency> = MutableStateFlow(inrCurrency)
