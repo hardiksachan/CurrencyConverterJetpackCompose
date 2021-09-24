@@ -8,12 +8,12 @@ import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
 import kotlin.coroutines.CoroutineContext
 
-interface UiState
-interface UiEvent
-interface UiEffect
+interface UIState
+interface UIEvent
+interface UIEffect
 
-abstract class BaseViewModel<Event : UiEvent, State : UiState, Effect : UiEffect>(
-    private val dispatcherProvider: DispatcherProvider
+abstract class BaseViewModel<Event : UIEvent, State : UIState, Effect : UIEffect>(
+    protected val dispatcherProvider: DispatcherProvider
 ) : CoroutineScope {
 
     private val jobTracker: Job = Job()

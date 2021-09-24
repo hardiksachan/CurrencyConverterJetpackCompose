@@ -1,3 +1,4 @@
 <resources>
     <string name="app_name">CurrencyConverterJetpackCompose</string>
+    <string name="generic_error_message">Unexpected Error</string>
 </resources>
