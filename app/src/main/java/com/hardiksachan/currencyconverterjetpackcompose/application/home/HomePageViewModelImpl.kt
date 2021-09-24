@@ -2,9 +2,11 @@ package com.hardiksachan.currencyconverterjetpackcompose.application.home
 
 import com.hardiksachan.currencyconverterjetpackcompose.application.BaseLogic
 import com.hardiksachan.currencyconverterjetpackcompose.common.DispatcherProvider
+import com.hardiksachan.currencyconverterjetpackcompose.common.ResultWrapper
 import com.hardiksachan.currencyconverterjetpackcompose.common.inrCurrency
 import com.hardiksachan.currencyconverterjetpackcompose.common.usdCurrency
 import com.hardiksachan.currencyconverterjetpackcompose.domain.entity.Currency
+import com.hardiksachan.currencyconverterjetpackcompose.domain.repository.ICurrencyRepository
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -12,6 +14,8 @@ import kotlinx.coroutines.launch
 import kotlin.coroutines.CoroutineContext
 
 class HomePageViewModelImpl(
+    private val repository: ICurrencyRepository,
+    private val effectHandler: IHomePageUI.Effect,
     private val dispatcherProvider: DispatcherProvider
 ) : BaseLogic<HomePageEvent>(),
     IHomePageUI.State,
@@ -21,6 +25,7 @@ class HomePageViewModelImpl(
         get() = baseCurrencyDisplay.value.toDouble()
         set(value) {
             launch {
+                targetDisplay = 0.0
                 baseCurrencyDisplay.emit(String.format("%.2f", value))
             }
         }
@@ -41,18 +46,71 @@ class HomePageViewModelImpl(
     }
 
     override fun onEvent(event: HomePageEvent) {
-         launch(dispatcherProvider.provideIOContext()) {
-             when (event) {
-                 HomePageEvent.BaseCurrencyChangeStarted -> TODO()
-                 is HomePageEvent.BaseCurrencyChanged -> TODO()
-                 is HomePageEvent.BaseCurrencyDisplayTextChanged -> TODO()
-                 HomePageEvent.EvaluatePressed -> TODO()
-                 HomePageEvent.SwitchCurrenciesPressed -> TODO()
-                 HomePageEvent.TargetCurrencyChangeStarted -> TODO()
-                 is HomePageEvent.TargetCurrencyChanged -> TODO()
-             }
+        launch(dispatcherProvider.provideIOContext()) {
+            when (event) {
+                HomePageEvent.BaseCurrencyChangeRequested -> handleBaseCurrencyChangeRequested()
+                is HomePageEvent.BaseCurrencyDisplayTextChanged -> handleBaseCurrencyDisplayTextChanged(
+                    event.newText
+                )
+                HomePageEvent.EvaluatePressed -> handleEvaluatePressed()
+                HomePageEvent.SwitchCurrenciesPressed -> handleSwitchCurrenciesPressed()
+                HomePageEvent.TargetCurrencyChangeRequested -> handleTargetCurrencyChangeRequested()
+            }
         }
     }
+
+    private suspend fun handleSwitchCurrenciesPressed() {
+        isLoading.emit(true)
+
+        val oldBaseCurrency = baseCurrency.value
+        val oldBaseDisplay = baseDisplay
+
+        baseCurrency.emit(targetCurrency.value)
+        baseDisplay = targetDisplay
+
+        targetCurrency.emit(oldBaseCurrency)
+        targetDisplay = oldBaseDisplay
+
+        isLoading.emit(false)
+    }
+
+    private suspend fun handleEvaluatePressed() {
+        isLoading.emit(true)
+
+        val response = repository.getConversionFactor(
+            baseCurrency = baseCurrency.value,
+            targetCurrency = targetCurrency.value
+        )
+
+        when (response) {
+            is ResultWrapper.Failure -> error.emit(response.error.message)
+            is ResultWrapper.Success -> targetDisplay = baseDisplay * response.result.rate
+        }
+
+        isLoading.emit(false)
+    }
+
+    private fun handleBaseCurrencyDisplayTextChanged(text: String) {
+        try {
+            baseDisplay = text.toDouble()
+
+        } catch (exp: NumberFormatException) {
+            effectHandler.showToast("Invalid number entered")
+        }
+    }
+
+    private suspend fun handleBaseCurrencyChangeRequested() {
+        effectHandler.receiveBaseCurrency {
+            baseCurrency.emit(it)
+        }
+    }
+
+    private fun handleTargetCurrencyChangeRequested() {
+        effectHandler.receiveBaseCurrency {
+            targetCurrency.emit(it)
+        }
+    }
+
 
     // Regarding UI State
 

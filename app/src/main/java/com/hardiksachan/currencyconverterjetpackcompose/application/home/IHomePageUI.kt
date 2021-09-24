@@ -18,6 +18,8 @@ interface IHomePageUI {
 
     interface Effect {
         fun showToast(message: String)
+        fun receiveBaseCurrency(callback: suspend (Currency) -> Unit)
+        fun receiveTargetCurrency(callback: suspend (Currency) -> Unit)
     }
 
 }
