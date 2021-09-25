@@ -1,4 +1,4 @@
-package com.hardiksachan.currencyconverterjetpackcompose.application.home
+package com.hardiksachan.currencyconverterjetpackcompose.application.currencyconverter
 
 import com.hardiksachan.currencyconverterjetpackcompose.application.BaseLogic
 import com.hardiksachan.currencyconverterjetpackcompose.common.DispatcherProvider
@@ -17,11 +17,12 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import kotlin.coroutines.CoroutineContext
 
-class HomePageViewModelImpl(
+class CurrencyConverterViewModelImpl(
     private val repository: ICurrencyRepository,
     private val dispatcherProvider: DispatcherProvider
-) : BaseLogic<HomePageEvent>(),
+) : BaseLogic<CurrencyConverterEvent>(),
     HomePageState,
+    CurrencySelectorPageState,
     CoroutineScope {
 
     private var baseDisplay: Double
@@ -41,7 +42,11 @@ class HomePageViewModelImpl(
             }
         }
 
-    private val effectChannel: Channel<HomePageEffect> = Channel()
+    private lateinit var onCurrencySelectedCallback: suspend (Currency) -> Unit
+
+    private lateinit var currencyListCache: List<Currency>
+
+    private val effectChannel: Channel<CurrencyConverterEffect> = Channel()
 
     override val coroutineContext: CoroutineContext
         get() = jobTracker + dispatcherProvider.UI()
@@ -50,18 +55,49 @@ class HomePageViewModelImpl(
         jobTracker = Job()
     }
 
-    override fun onEvent(event: HomePageEvent) {
+    override fun onEvent(event: CurrencyConverterEvent) {
         launch {
             when (event) {
-                HomePageEvent.BaseCurrencyChangeRequested -> handleBaseCurrencyChangeRequested()
-                is HomePageEvent.BaseCurrencyDisplayTextChanged -> handleBaseCurrencyDisplayTextChanged(
+                CurrencyConverterEvent.BaseCurrencyChangeRequested -> handleBaseCurrencyChangeRequested()
+                is CurrencyConverterEvent.BaseCurrencyDisplayTextChanged -> handleBaseCurrencyDisplayTextChanged(
                     event.newText
                 )
-                HomePageEvent.EvaluatePressed -> handleEvaluatePressed()
-                HomePageEvent.SwitchCurrenciesPressed -> handleSwitchCurrenciesPressed()
-                HomePageEvent.TargetCurrencyChangeRequested -> handleTargetCurrencyChangeRequested()
+                CurrencyConverterEvent.EvaluatePressed -> handleEvaluatePressed()
+                CurrencyConverterEvent.SwitchCurrenciesPressed -> handleSwitchCurrenciesPressed()
+                CurrencyConverterEvent.TargetCurrencyChangeRequested -> handleTargetCurrencyChangeRequested()
+                is CurrencyConverterEvent.CurrencySelected -> handleCurrencySelected(event.currency)
+                CurrencyConverterEvent.PullToRefresh -> handlePullToRefresh()
+                is CurrencyConverterEvent.SearchDisplayTextChanged -> handleSearchDisplayTextChanged(event.newText)
             }
         }
+    }
+
+    private suspend fun handleSearchDisplayTextChanged(newText: String) {
+        withLoading {
+            searchDisplay.emit(newText)
+            currencyList.emit(
+                currencyListCache.filter {
+                    it.name.contains(newText) || it.code.contains(newText)
+                }
+            )
+        }
+    }
+
+    private suspend fun handlePullToRefresh() {
+        withLoading {
+            val response = withContext(dispatcherProvider.IO()) {
+                repository.getAllCurrencies()
+            }
+
+            when (response) {
+                is ResultWrapper.Failure -> error.emit(response.error.message)
+                is ResultWrapper.Success -> currencyListCache = response.result
+            }
+        }
+    }
+
+    private suspend fun handleCurrencySelected(currency: Currency) {
+        onCurrencySelectedCallback.invoke(currency)
     }
 
     private suspend fun handleSwitchCurrenciesPressed() {
@@ -99,20 +135,20 @@ class HomePageViewModelImpl(
             baseDisplay = text.toDouble()
 
         } catch (exp: NumberFormatException) {
-            effectChannel.send(HomePageEffect.ShowToast("Invalid number entered"))
+            effectChannel.send(CurrencyConverterEffect.ShowToast("Invalid number entered"))
         }
     }
 
     private suspend fun handleBaseCurrencyChangeRequested() {
-        effectChannel.send(HomePageEffect.ReceiveBaseCurrency {
+        onCurrencySelectedCallback = {
             baseCurrency.emit(it)
-        })
+        }
     }
 
     private suspend fun handleTargetCurrencyChangeRequested() {
-        effectChannel.send(HomePageEffect.ReceiveTargetCurrency {
+        onCurrencySelectedCallback = {
             targetCurrency.emit(it)
-        })
+        }
     }
 
     private suspend fun withLoading(f: suspend () -> Unit) {
@@ -130,7 +166,10 @@ class HomePageViewModelImpl(
     override val targetCurrency: MutableStateFlow<Currency> = MutableStateFlow(inrCurrency)
     override val baseCurrencyDisplay: MutableStateFlow<String> = MutableStateFlow("0.00")
     override val targetCurrencyDisplay: MutableStateFlow<String> = MutableStateFlow("0.00")
-    override val isLoading: MutableStateFlow<Boolean> = MutableStateFlow(false)
+    override val currencyList = MutableStateFlow<List<Currency>>(listOf())
+    override val searchDisplay = MutableStateFlow("")
+    override val isLoading = MutableStateFlow(false)
+    override val pullToRefreshVisible = MutableStateFlow(false)
     override val error: MutableStateFlow<String?> = MutableStateFlow(null)
-    override val effectStream: Flow<HomePageEffect> = effectChannel.receiveAsFlow()
+    override val effectStream: Flow<CurrencyConverterEffect> = effectChannel.receiveAsFlow()
 }

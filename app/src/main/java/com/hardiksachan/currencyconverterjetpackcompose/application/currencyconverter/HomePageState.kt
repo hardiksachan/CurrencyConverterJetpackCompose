@@ -1,4 +1,4 @@
-package com.hardiksachan.currencyconverterjetpackcompose.application.home
+package com.hardiksachan.currencyconverterjetpackcompose.application.currencyconverter
 
 import com.hardiksachan.currencyconverterjetpackcompose.domain.entity.Currency
 import kotlinx.coroutines.flow.Flow
@@ -14,5 +14,5 @@ interface HomePageState {
     val isLoading: StateFlow<Boolean>
     val error: StateFlow<String?>
 
-    val effectStream: Flow<HomePageEffect>
+    val effectStream: Flow<CurrencyConverterEffect>
 }
