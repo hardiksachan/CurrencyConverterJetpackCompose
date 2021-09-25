@@ -22,7 +22,7 @@ class HomePageViewModelImpl(
     IHomePageUI.State,
     CoroutineScope {
 
-    var baseDisplay: Double
+    private var baseDisplay: Double
         get() = baseCurrencyDisplay.value.toDouble()
         set(value) {
             launch {
@@ -31,7 +31,7 @@ class HomePageViewModelImpl(
             }
         }
 
-    var targetDisplay: Double
+    private var targetDisplay: Double
         get() = targetCurrencyDisplay.value.toDouble()
         set(value) {
             launch {
@@ -61,37 +61,32 @@ class HomePageViewModelImpl(
     }
 
     private suspend fun handleSwitchCurrenciesPressed() {
-        isLoading.emit(true)
+        withLoading {
+            val oldBaseCurrency = baseCurrency.value
+            val oldBaseDisplay = baseDisplay
 
-        val oldBaseCurrency = baseCurrency.value
-        val oldBaseDisplay = baseDisplay
+            baseCurrency.emit(targetCurrency.value)
+            baseDisplay = targetDisplay
 
-        baseCurrency.emit(targetCurrency.value)
-        baseDisplay = targetDisplay
-
-        targetCurrency.emit(oldBaseCurrency)
-        targetDisplay = oldBaseDisplay
-
-        isLoading.emit(false)
+            targetCurrency.emit(oldBaseCurrency)
+            targetDisplay = oldBaseDisplay
+        }
     }
 
     private suspend fun handleEvaluatePressed() {
-        isLoading.emit(true)
+        withLoading {
+            val response = withContext(dispatcherProvider.IO()) {
+                repository.getConversionFactor(
+                    baseCurrency = baseCurrency.value,
+                    targetCurrency = targetCurrency.value
+                )
+            }
 
-        val response = withContext(dispatcherProvider.IO()) {
-            repository.getConversionFactor(
-                baseCurrency = baseCurrency.value,
-                targetCurrency = targetCurrency.value
-            )
+            when (response) {
+                is ResultWrapper.Failure -> error.emit(response.error.message)
+                is ResultWrapper.Success -> targetDisplay = baseDisplay * response.result.rate
+            }
         }
-
-        when (response) {
-            is ResultWrapper.Failure -> error.emit(response.error.message)
-            is ResultWrapper.Success -> targetDisplay = baseDisplay * response.result.rate
-        }
-
-
-        isLoading.emit(false)
     }
 
 
@@ -114,6 +109,14 @@ class HomePageViewModelImpl(
         effectHandler.receiveBaseCurrency {
             targetCurrency.emit(it)
         }
+    }
+
+    private suspend fun withLoading(f: suspend () -> Unit) {
+        isLoading.emit(true)
+
+        f.invoke()
+
+        isLoading.emit(false)
     }
 
 

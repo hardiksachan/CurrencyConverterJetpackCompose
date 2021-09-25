@@ -2,12 +2,14 @@ package com.hardiksachan.currencyconverterjetpackcompose.application.currencysel
 
 import com.hardiksachan.currencyconverterjetpackcompose.application.BaseLogic
 import com.hardiksachan.currencyconverterjetpackcompose.common.DispatcherProvider
+import com.hardiksachan.currencyconverterjetpackcompose.common.ResultWrapper
 import com.hardiksachan.currencyconverterjetpackcompose.domain.entity.Currency
 import com.hardiksachan.currencyconverterjetpackcompose.domain.repository.ICurrencyRepository
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import kotlin.coroutines.CoroutineContext
 
 class CurrencySelectorPageViewModelImpl(
@@ -30,12 +32,50 @@ class CurrencySelectorPageViewModelImpl(
 
     override fun onEvent(event: CurrencySelectorPageEvent) {
         launch(dispatcherProvider.UI()) {
-            when(event) {
-                is CurrencySelectorPageEvent.CurrencySelected -> TODO()
-                CurrencySelectorPageEvent.PullToRefresh -> TODO()
-                is CurrencySelectorPageEvent.SearchDisplayTextChanged -> TODO()
+            when (event) {
+                is CurrencySelectorPageEvent.CurrencySelected -> handleCurrencySelected(event.currency)
+                CurrencySelectorPageEvent.PullToRefresh -> handlePullToRefresh()
+                is CurrencySelectorPageEvent.SearchDisplayTextChanged -> handleSearchDisplayTextChanged(
+                    event.newText
+                )
             }
         }
+    }
+
+    private suspend fun handleSearchDisplayTextChanged(newText: String) {
+        withLoading {
+            searchDisplay.emit(newText)
+            currencyList.emit(
+                currencyListCache.filter {
+                    it.name.contains(newText) || it.code.contains(newText)
+                }
+            )
+        }
+    }
+
+    private suspend fun handlePullToRefresh() {
+        withLoading {
+            val response = withContext(dispatcherProvider.IO()) {
+                repository.getAllCurrencies()
+            }
+
+            when (response) {
+                is ResultWrapper.Failure -> error.emit(response.error.message)
+                is ResultWrapper.Success -> currencyListCache = response.result
+            }
+        }
+    }
+
+    private fun handleCurrencySelected(currency: Currency) {
+        TODO("Not yet implemented")
+    }
+
+    private suspend fun withLoading(f: suspend () -> Unit) {
+        isLoading.emit(true)
+
+        f.invoke()
+
+        isLoading.emit(false)
     }
 
     // Regarding UI State
