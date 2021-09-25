@@ -9,17 +9,19 @@ import com.hardiksachan.currencyconverterjetpackcompose.domain.entity.Currency
 import com.hardiksachan.currencyconverterjetpackcompose.domain.repository.ICurrencyRepository
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.channels.Channel
+import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.receiveAsFlow
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import kotlin.coroutines.CoroutineContext
 
 class HomePageViewModelImpl(
     private val repository: ICurrencyRepository,
-    private val effectHandler: IHomePageUI.EffectHandler,
     private val dispatcherProvider: DispatcherProvider
 ) : BaseLogic<HomePageEvent>(),
-    IHomePageUI.State,
+    HomePageState,
     CoroutineScope {
 
     private var baseDisplay: Double
@@ -38,6 +40,8 @@ class HomePageViewModelImpl(
                 targetCurrencyDisplay.emit(String.format("%.2f", value))
             }
         }
+
+    private val effectChannel: Channel<HomePageEffect> = Channel()
 
     override val coroutineContext: CoroutineContext
         get() = jobTracker + dispatcherProvider.UI()
@@ -90,25 +94,25 @@ class HomePageViewModelImpl(
     }
 
 
-    private fun handleBaseCurrencyDisplayTextChanged(text: String) {
+    private suspend fun handleBaseCurrencyDisplayTextChanged(text: String) {
         try {
             baseDisplay = text.toDouble()
 
         } catch (exp: NumberFormatException) {
-            effectHandler.showToast("Invalid number entered")
+            effectChannel.send(HomePageEffect.ShowToast("Invalid number entered"))
         }
     }
 
     private suspend fun handleBaseCurrencyChangeRequested() {
-        effectHandler.receiveBaseCurrency {
+        effectChannel.send(HomePageEffect.ReceiveBaseCurrency {
             baseCurrency.emit(it)
-        }
+        })
     }
 
-    private fun handleTargetCurrencyChangeRequested() {
-        effectHandler.receiveTargetCurrency {
+    private suspend fun handleTargetCurrencyChangeRequested() {
+        effectChannel.send(HomePageEffect.ReceiveTargetCurrency {
             targetCurrency.emit(it)
-        }
+        })
     }
 
     private suspend fun withLoading(f: suspend () -> Unit) {
@@ -128,4 +132,5 @@ class HomePageViewModelImpl(
     override val targetCurrencyDisplay: MutableStateFlow<String> = MutableStateFlow("0.00")
     override val isLoading: MutableStateFlow<Boolean> = MutableStateFlow(false)
     override val error: MutableStateFlow<String?> = MutableStateFlow(null)
+    override val effectStream: Flow<HomePageEffect> = effectChannel.receiveAsFlow()
 }
