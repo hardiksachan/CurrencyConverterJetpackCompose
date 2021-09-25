@@ -106,7 +106,7 @@ class HomePageViewModelImpl(
     }
 
     private fun handleTargetCurrencyChangeRequested() {
-        effectHandler.receiveBaseCurrency {
+        effectHandler.receiveTargetCurrency {
             targetCurrency.emit(it)
         }
     }

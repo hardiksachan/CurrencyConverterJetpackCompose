@@ -16,6 +16,7 @@ interface ICurrencySelectorPageUI {
 
     interface EffectHandler {
         fun showToast(message: String)
+        fun sendCurrency(currency: Currency)
     }
 
 }

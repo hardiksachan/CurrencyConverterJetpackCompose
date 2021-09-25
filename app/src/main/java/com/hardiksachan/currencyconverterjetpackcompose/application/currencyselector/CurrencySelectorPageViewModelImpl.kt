@@ -67,7 +67,7 @@ class CurrencySelectorPageViewModelImpl(
     }
 
     private fun handleCurrencySelected(currency: Currency) {
-        TODO("Not yet implemented")
+        effectHandler.sendCurrency(currency)
     }
 
     private suspend fun withLoading(f: suspend () -> Unit) {
