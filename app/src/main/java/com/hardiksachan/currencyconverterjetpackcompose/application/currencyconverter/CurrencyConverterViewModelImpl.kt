@@ -28,26 +28,6 @@ class CurrencyConverterViewModelImpl(
     CurrencySelectorPageState,
     CoroutineScope {
 
-    private var baseDisplay: Double
-        get() = baseCurrencyDisplay.value.toDouble()
-        set(value) {
-            launch {
-                targetDisplay = 0.0
-                baseCurrencyDisplay.emit(
-                    if (value == 0.0) ""
-                    else String.format("%.0f", value)
-                )
-            }
-        }
-
-    private var targetDisplay: Double
-        get() = targetCurrencyDisplay.value.toDouble()
-        set(value) {
-            launch {
-                targetCurrencyDisplay.emit(String.format("%.2f", value))
-            }
-        }
-
     private lateinit var onCurrencySelectedCallback: suspend (Currency) -> Unit
 
     private lateinit var currencyListCache: List<Currency>
@@ -112,13 +92,13 @@ class CurrencyConverterViewModelImpl(
     private suspend fun handleSwitchCurrenciesPressed() {
         withLoading {
             val oldBaseCurrency = baseCurrency.value
-            val oldBaseDisplay = baseDisplay
+            val oldBaseCurrencyDisplay = baseCurrencyDisplay.value
 
             baseCurrency.emit(targetCurrency.value)
-            baseDisplay = targetDisplay
+            baseCurrencyDisplay.emit(targetCurrencyDisplay.value)
 
             targetCurrency.emit(oldBaseCurrency)
-            targetDisplay = oldBaseDisplay
+            targetCurrencyDisplay.emit(oldBaseCurrencyDisplay)
         }
     }
 
@@ -131,26 +111,31 @@ class CurrencyConverterViewModelImpl(
                 )
             }
 
-            Log.d("TAG", "handleEvaluatePressed: response = $response")
-            Log.d("TAG", "handleEvaluatePressed: base = $baseDisplay , $baseCurrencyDisplay")
-            Log.d("TAG", "handleEvaluatePressed: target = $targetDisplay , $targetCurrencyDisplay")
-
             when (response) {
                 is ResultWrapper.Failure -> error.emit(response.error.message)
-                is ResultWrapper.Success -> targetDisplay = baseDisplay * response.result.rate
+                is ResultWrapper.Success -> {
+                    when (val baseAmount = baseCurrencyDisplay.value.getDouble()) {
+                        is ResultWrapper.Failure -> {
+                            targetCurrencyDisplay.emit("")
+                            effectChannel.send(
+                                CurrencyConverterEffect.ShowToast(
+                                    "Invalid base currency amount"
+                                )
+                            )
+                        }
+                        is ResultWrapper.Success -> targetCurrencyDisplay.emit(
+                            String.format("%.2f", baseAmount.result * response.result.rate)
+                        )
+                    }
+                }
             }
         }
     }
 
 
     private suspend fun handleBaseCurrencyDisplayTextChanged(text: String) {
-        try {
-            if (text.isEmpty()) baseDisplay = 0.0
-            baseDisplay = text.toDouble()
-
-        } catch (exp: NumberFormatException) {
-            effectChannel.send(CurrencyConverterEffect.ShowToast("Invalid number entered"))
-        }
+        baseCurrencyDisplay.emit(text)
+        targetCurrencyDisplay.emit("")
     }
 
     private suspend fun handleBaseCurrencyChangeRequested() {
@@ -173,13 +158,26 @@ class CurrencyConverterViewModelImpl(
         isLoading.emit(false)
     }
 
+    private fun String.getDouble(): ResultWrapper<NumberFormatException, Double> {
+        val str = this.trim()
+
+        return if (str.isEmpty()) {
+            ResultWrapper.Success(0.0)
+        } else {
+            try {
+                ResultWrapper.Success(str.toDouble())
+            } catch (exp: NumberFormatException) {
+                ResultWrapper.Failure(exp)
+            }
+        }
+    }
 
 // Regarding UI State
 
     override val baseCurrency: MutableStateFlow<Currency> = MutableStateFlow(usdCurrency)
     override val targetCurrency: MutableStateFlow<Currency> = MutableStateFlow(inrCurrency)
-    override val baseCurrencyDisplay: MutableStateFlow<String> = MutableStateFlow("0.00")
-    override val targetCurrencyDisplay: MutableStateFlow<String> = MutableStateFlow("0.00")
+    override val baseCurrencyDisplay: MutableStateFlow<String> = MutableStateFlow("")
+    override val targetCurrencyDisplay: MutableStateFlow<String> = MutableStateFlow("")
     override val currencyList = MutableStateFlow<List<Currency>>(listOf())
     override val searchDisplay = MutableStateFlow("")
     override val isLoading = MutableStateFlow(false)

@@ -12,6 +12,7 @@ import androidx.compose.runtime.State
 import androidx.compose.runtime.collectAsState
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.rememberVectorPainter
 import androidx.compose.ui.text.input.KeyboardType
@@ -40,6 +41,17 @@ fun HomePage(
     Scaffold(
         scaffoldState = scaffoldState,
         modifier = Modifier.fillMaxWidth(),
+        topBar = {
+            Text(
+                text = "hey there",
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 16.dp)
+                    .padding(top = 16.dp),
+                style = MaterialTheme.typography.h4
+            )
+        },
+        backgroundColor = MaterialTheme.colors.primarySurface
     ) {
         Column(
             verticalArrangement = Arrangement.Top,
@@ -68,27 +80,41 @@ fun HomePage(
                     .fillMaxWidth()
                     .padding(horizontal = 16.dp, vertical = 8.dp)
             ) {
-                Button(onClick = {
-                    logic.onEvent(CurrencyConverterEvent.EvaluatePressed)
-                }) {
-                    Icon(
-                        painter = rememberVectorPainter(Icons.Filled.Send),
-                        contentDescription = "Evaluate"
+                Button(
+                    onClick = {
+                        logic.onEvent(CurrencyConverterEvent.SwitchCurrenciesPressed)
+                    },
+                    elevation = ButtonDefaults.elevation(
+                        defaultElevation = 8.dp,
+                        pressedElevation = 16.dp,
+                        disabledElevation = 4.dp
                     )
-                }
-
-
-                Spacer(modifier = Modifier.width(8.dp))
-
-                Button(onClick = {
-                    logic.onEvent(CurrencyConverterEvent.SwitchCurrenciesPressed)
-                }) {
+                ) {
                     Row(
                         verticalAlignment = Alignment.CenterVertically,
                         horizontalArrangement = Arrangement.SpaceEvenly
                     ) {
                         Text(text = "Switch Currencies")
                     }
+                }
+
+                Spacer(modifier = Modifier.width(8.dp))
+
+                Button(
+                    onClick = {
+                        logic.onEvent(CurrencyConverterEvent.EvaluatePressed)
+                    },
+                    elevation = ButtonDefaults.elevation(
+                        defaultElevation = 8.dp,
+                        pressedElevation = 16.dp,
+                        disabledElevation = 4.dp
+                    )
+                ) {
+                    Icon(
+                        painter = rememberVectorPainter(Icons.Filled.Send),
+                        contentDescription = "Evaluate",
+                        modifier = Modifier.size(20.dp)
+                    )
                 }
             }
 
@@ -129,10 +155,10 @@ fun CurrencyCard(
     Card(
         modifier = modifier
             .fillMaxWidth()
-            .padding(8.dp),
+            .padding(horizontal = 16.dp, vertical = 4.dp),
         shape = MaterialTheme.shapes.small,
-        elevation = 4.dp,
-        backgroundColor = MaterialTheme.colors.primaryVariant
+        elevation = 16.dp,
+        backgroundColor = MaterialTheme.colors.primary
     ) {
         Column(
             modifier = Modifier
@@ -144,6 +170,8 @@ fun CurrencyCard(
                 verticalAlignment = Alignment.CenterVertically,
                 modifier = Modifier
                     .fillMaxWidth()
+                    .padding(8.dp)
+                    .clip(MaterialTheme.shapes.medium)
                     .clickable {
                         currencyClickHandler()
                     }
