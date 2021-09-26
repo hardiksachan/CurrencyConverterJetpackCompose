@@ -2,6 +2,7 @@ package com.hardiksachan.currencyconverterjetpackcompose.presentation.currencyco
 
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.*
 import androidx.compose.material.icons.Icons
@@ -15,6 +16,8 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.rememberVectorPainter
+import androidx.compose.ui.platform.LocalFocusManager
+import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import com.hardiksachan.currencyconverterjetpackcompose.application.currencyconverter.CurrencyConverterEvent
@@ -22,11 +25,14 @@ import com.hardiksachan.currencyconverterjetpackcompose.application.currencyconv
 import com.hardiksachan.currencyconverterjetpackcompose.application.currencyconverter.HomePageState
 import com.hardiksachan.currencyconverterjetpackcompose.domain.entity.Currency
 import com.hardiksachan.currencyconverterjetpackcompose.presentation.theme.BlueDark
+import com.hardiksachan.currencyconverterjetpackcompose.presentation.theme.BlueLight
+import com.hardiksachan.currencyconverterjetpackcompose.presentation.util.noRippleClickable
 
 @Composable
 fun HomePage(
     state: HomePageState,
     logic: CurrencyConverterLogic,
+    snackbarHostState: SnackbarHostState,
 ) {
     val baseCurrency: State<Currency> = state.baseCurrency.collectAsState()
     val baseCurrencyDisplay = state.baseCurrencyDisplay.collectAsState()
@@ -36,7 +42,9 @@ fun HomePage(
 
     val error = state.error.collectAsState()
 
-    val scaffoldState = rememberScaffoldState()
+    val scaffoldState = rememberScaffoldState(snackbarHostState = snackbarHostState)
+
+    val focusManager = LocalFocusManager.current
 
     Scaffold(
         scaffoldState = scaffoldState,
@@ -56,7 +64,11 @@ fun HomePage(
         Column(
             verticalArrangement = Arrangement.Top,
             horizontalAlignment = Alignment.CenterHorizontally,
-            modifier = Modifier.fillMaxWidth()
+            modifier = Modifier
+                .fillMaxSize()
+                .noRippleClickable {
+                    focusManager.clearFocus()
+                }
         ) {
             CurrencyCard(
                 currency = baseCurrency.value,
@@ -102,6 +114,7 @@ fun HomePage(
 
                 Button(
                     onClick = {
+                        focusManager.clearFocus()
                         logic.onEvent(CurrencyConverterEvent.EvaluatePressed)
                     },
                     elevation = ButtonDefaults.elevation(
@@ -127,7 +140,7 @@ fun HomePage(
                 currencyClickHandler = {
                     logic.onEvent(CurrencyConverterEvent.TargetCurrencyChangeRequested)
                 },
-                textChangeHandler = {}, enabled = false
+                textChangeHandler = {}, readonly = true
             )
             if (error.value != null) {
                 Spacer(modifier = Modifier.padding(32.dp))
@@ -139,8 +152,6 @@ fun HomePage(
             }
         }
     }
-
-
 }
 
 @Composable
@@ -150,8 +161,11 @@ fun CurrencyCard(
     currencyClickHandler: () -> Unit,
     textChangeHandler: (String) -> Unit,
     modifier: Modifier = Modifier,
-    enabled: Boolean = true
+    readonly: Boolean = false
 ) {
+
+    val focusManager = LocalFocusManager.current
+
     Card(
         modifier = modifier
             .fillMaxWidth()
@@ -170,7 +184,6 @@ fun CurrencyCard(
                 verticalAlignment = Alignment.CenterVertically,
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(8.dp)
                     .clip(MaterialTheme.shapes.medium)
                     .clickable {
                         currencyClickHandler()
@@ -178,7 +191,8 @@ fun CurrencyCard(
             ) {
                 Column(
                     verticalArrangement = Arrangement.SpaceAround,
-                    horizontalAlignment = Alignment.Start
+                    horizontalAlignment = Alignment.Start,
+                    modifier = Modifier.padding(8.dp)
                 ) {
                     Text(
                         text = currency.code.uppercase(),
@@ -206,13 +220,23 @@ fun CurrencyCard(
                 leadingIcon = {
                     Text(text = java.util.Currency.getInstance(currency.code).symbol)
                 },
-                enabled = enabled,
+                readOnly = readonly,
                 keyboardOptions = KeyboardOptions.Default.copy(
-                    keyboardType = KeyboardType.Number
+                    keyboardType = KeyboardType.Number,
+                    imeAction = ImeAction.Done
+                ),
+                keyboardActions = KeyboardActions(
+                    onDone = {
+                        focusManager.clearFocus()
+                    }
                 ),
                 placeholder = {
                     Text(text = "0.00")
-                }
+                },
+                colors = TextFieldDefaults.outlinedTextFieldColors(
+                    focusedBorderColor = BlueLight,
+                    unfocusedBorderColor = MaterialTheme.colors.onPrimary
+                )
             )
         }
     }
