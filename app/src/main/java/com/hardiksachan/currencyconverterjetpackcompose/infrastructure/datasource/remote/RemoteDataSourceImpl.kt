@@ -16,7 +16,7 @@ class RemoteDataSourceImpl(
     private val dispatcherProvider: DispatcherProvider,
 ) : IRemoteDataSource {
 
-    val client = HttpClient(Android) {
+    private val client = HttpClient(Android) {
         install(JsonFeature) {
             serializer = KotlinxSerializer()
         }

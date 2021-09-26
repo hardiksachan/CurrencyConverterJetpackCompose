@@ -1,5 +1,6 @@
 package com.hardiksachan.currencyconverterjetpackcompose.application.currencyconverter
 
+import android.util.Log
 import com.hardiksachan.currencyconverterjetpackcompose.application.BaseLogic
 import com.hardiksachan.currencyconverterjetpackcompose.common.DispatcherProvider
 import com.hardiksachan.currencyconverterjetpackcompose.common.ResultWrapper
@@ -17,10 +18,12 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import kotlin.coroutines.CoroutineContext
 
+typealias CurrencyConverterLogic = BaseLogic<CurrencyConverterEvent>
+
 class CurrencyConverterViewModelImpl(
     private val repository: ICurrencyRepository,
     private val dispatcherProvider: DispatcherProvider
-) : BaseLogic<CurrencyConverterEvent>(),
+) : CurrencyConverterLogic(),
     HomePageState,
     CurrencySelectorPageState,
     CoroutineScope {
@@ -30,7 +33,10 @@ class CurrencyConverterViewModelImpl(
         set(value) {
             launch {
                 targetDisplay = 0.0
-                baseCurrencyDisplay.emit(String.format("%.2f", value))
+                baseCurrencyDisplay.emit(
+                    if (value == 0.0) ""
+                    else String.format("%.0f", value)
+                )
             }
         }
 
@@ -56,6 +62,7 @@ class CurrencyConverterViewModelImpl(
     }
 
     override fun onEvent(event: CurrencyConverterEvent) {
+        Log.d("TAG", "onEvent: event = $event")
         launch {
             when (event) {
                 CurrencyConverterEvent.BaseCurrencyChangeRequested -> handleBaseCurrencyChangeRequested()
@@ -67,7 +74,9 @@ class CurrencyConverterViewModelImpl(
                 CurrencyConverterEvent.TargetCurrencyChangeRequested -> handleTargetCurrencyChangeRequested()
                 is CurrencyConverterEvent.CurrencySelected -> handleCurrencySelected(event.currency)
                 CurrencyConverterEvent.PullToRefresh -> handlePullToRefresh()
-                is CurrencyConverterEvent.SearchDisplayTextChanged -> handleSearchDisplayTextChanged(event.newText)
+                is CurrencyConverterEvent.SearchDisplayTextChanged -> handleSearchDisplayTextChanged(
+                    event.newText
+                )
             }
         }
     }
@@ -122,6 +131,10 @@ class CurrencyConverterViewModelImpl(
                 )
             }
 
+            Log.d("TAG", "handleEvaluatePressed: response = $response")
+            Log.d("TAG", "handleEvaluatePressed: base = $baseDisplay , $baseCurrencyDisplay")
+            Log.d("TAG", "handleEvaluatePressed: target = $targetDisplay , $targetCurrencyDisplay")
+
             when (response) {
                 is ResultWrapper.Failure -> error.emit(response.error.message)
                 is ResultWrapper.Success -> targetDisplay = baseDisplay * response.result.rate
@@ -132,6 +145,7 @@ class CurrencyConverterViewModelImpl(
 
     private suspend fun handleBaseCurrencyDisplayTextChanged(text: String) {
         try {
+            if (text.isEmpty()) baseDisplay = 0.0
             baseDisplay = text.toDouble()
 
         } catch (exp: NumberFormatException) {
