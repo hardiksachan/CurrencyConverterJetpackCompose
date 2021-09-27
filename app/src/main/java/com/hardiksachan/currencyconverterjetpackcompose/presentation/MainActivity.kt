@@ -3,17 +3,26 @@ package com.hardiksachan.currencyconverterjetpackcompose.presentation
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
+import androidx.compose.animation.ExperimentalAnimationApi
 import androidx.compose.material.SnackbarHostState
 import androidx.lifecycle.lifecycleScope
+import androidx.navigation.compose.NavHost
+import androidx.navigation.compose.composable
+import androidx.navigation.compose.rememberNavController
 import com.hardiksachan.currencyconverterjetpackcompose.application.currencyconverter.CurrencyConverterEffect
 import com.hardiksachan.currencyconverterjetpackcompose.application.currencyconverter.CurrencyConverterLogic
+import com.hardiksachan.currencyconverterjetpackcompose.application.currencyconverter.CurrencySelectorPageState
 import com.hardiksachan.currencyconverterjetpackcompose.application.currencyconverter.HomePageState
+import com.hardiksachan.currencyconverterjetpackcompose.presentation.currencyconverter.CurrencySelectorPage
 import com.hardiksachan.currencyconverterjetpackcompose.presentation.currencyconverter.HomePage
 import com.hardiksachan.currencyconverterjetpackcompose.presentation.currencyconverter.di.viewModel
 import com.hardiksachan.currencyconverterjetpackcompose.presentation.theme.AppTheme
+import com.hardiksachan.currencyconverterjetpackcompose.presentation.util.HOME_PAGE
+import com.hardiksachan.currencyconverterjetpackcompose.presentation.util.SELECTOR_PAGE
 import kotlinx.coroutines.flow.collect
 import kotlinx.coroutines.launch
 
+@ExperimentalAnimationApi
 class MainActivity : ComponentActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -21,21 +30,40 @@ class MainActivity : ComponentActivity() {
 
         val snackbarHostState = SnackbarHostState()
 
-        val state: HomePageState = viewModel
+        val homePageState: HomePageState = viewModel
+        val currencySelectorPageState: CurrencySelectorPageState = viewModel
         val logic: CurrencyConverterLogic = viewModel
+
 
         setContent {
             AppTheme {
-                HomePage(
-                    state = state,
-                    logic = logic,
-                    snackbarHostState = snackbarHostState
-                )
+
+                val navController = rememberNavController()
+
+                NavHost(navController = navController, startDestination = HOME_PAGE) {
+                    composable(HOME_PAGE) {
+                        HomePage(
+                            state = homePageState,
+                            logic = logic,
+                            snackbarHostState = snackbarHostState,
+                            navController = navController
+                        )
+                    }
+                    composable(SELECTOR_PAGE) {
+                        CurrencySelectorPage(
+                            state = currencySelectorPageState,
+                            logic = logic,
+                            snackbarHostState = snackbarHostState,
+                            navController = navController
+                        )
+                    }
+                }
+
             }
         }
 
         lifecycleScope.launch {
-            state.effectStream.collect {
+            homePageState.effectStream.collect {
                 when (it) {
                     is CurrencyConverterEffect.ShowToast -> snackbarHostState.showSnackbar(
                         it.message

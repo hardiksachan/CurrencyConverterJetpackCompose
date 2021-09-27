@@ -30,7 +30,7 @@ class CurrencyConverterViewModelImpl(
 
     private lateinit var onCurrencySelectedCallback: suspend (Currency) -> Unit
 
-    private lateinit var currencyListCache: List<Currency>
+    private var currencyListCache: List<Currency> = listOf()
 
     private val effectChannel: Channel<CurrencyConverterEffect> = Channel()
 
@@ -66,7 +66,10 @@ class CurrencyConverterViewModelImpl(
             searchDisplay.emit(newText)
             currencyList.emit(
                 currencyListCache.filter {
-                    it.name.contains(newText) || it.code.contains(newText)
+                    it.name.contains(newText, ignoreCase = true) || it.code.contains(
+                        newText,
+                        ignoreCase = true
+                    )
                 }
             )
         }
@@ -139,15 +142,39 @@ class CurrencyConverterViewModelImpl(
     }
 
     private suspend fun handleBaseCurrencyChangeRequested() {
+        refreshCurrencyCache()
+        resetSearch()
         onCurrencySelectedCallback = {
             baseCurrency.emit(it)
         }
     }
 
     private suspend fun handleTargetCurrencyChangeRequested() {
+        refreshCurrencyCache()
+        resetSearch()
         onCurrencySelectedCallback = {
             targetCurrency.emit(it)
         }
+    }
+
+    private suspend fun refreshCurrencyCache() {
+        withContext(dispatcherProvider.IO()) {
+            when (val response = repository.getAllCurrencies()) {
+                is ResultWrapper.Failure -> effectChannel.send(
+                    CurrencyConverterEffect.ShowToast(
+                        response.error.localizedMessage ?: "Unknown error occurred"
+                    )
+                )
+                is ResultWrapper.Success -> {
+                    currencyListCache = response.result
+                }
+            }
+        }
+    }
+
+    private suspend fun resetSearch() {
+        searchDisplay.emit("")
+        currencyList.emit(currencyListCache)
     }
 
     private suspend fun withLoading(f: suspend () -> Unit) {

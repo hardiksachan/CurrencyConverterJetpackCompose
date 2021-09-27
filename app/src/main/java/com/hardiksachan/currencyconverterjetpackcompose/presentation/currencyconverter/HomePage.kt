@@ -23,6 +23,7 @@ import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
+import androidx.navigation.NavController
 import com.hardiksachan.currencyconverterjetpackcompose.application.currencyconverter.CurrencyConverterEvent
 import com.hardiksachan.currencyconverterjetpackcompose.application.currencyconverter.CurrencyConverterLogic
 import com.hardiksachan.currencyconverterjetpackcompose.application.currencyconverter.HomePageState
@@ -30,6 +31,7 @@ import com.hardiksachan.currencyconverterjetpackcompose.domain.entity.Currency
 import com.hardiksachan.currencyconverterjetpackcompose.presentation.theme.Black
 import com.hardiksachan.currencyconverterjetpackcompose.presentation.theme.BlueDark
 import com.hardiksachan.currencyconverterjetpackcompose.presentation.theme.BlueLight
+import com.hardiksachan.currencyconverterjetpackcompose.presentation.util.SELECTOR_PAGE
 import com.hardiksachan.currencyconverterjetpackcompose.presentation.util.noRippleClickable
 
 @ExperimentalAnimationApi
@@ -38,6 +40,7 @@ fun HomePage(
     state: HomePageState,
     logic: CurrencyConverterLogic,
     snackbarHostState: SnackbarHostState,
+    navController: NavController
 ) {
     val baseCurrency: State<Currency> = state.baseCurrency.collectAsState()
     val baseCurrencyDisplay = state.baseCurrencyDisplay.collectAsState()
@@ -81,6 +84,7 @@ fun HomePage(
                 amount = baseCurrencyDisplay.value,
                 currencyClickHandler = {
                     logic.onEvent(CurrencyConverterEvent.BaseCurrencyChangeRequested)
+                    navController.navigate(SELECTOR_PAGE)
                 },
                 textChangeHandler = {
                     logic.onEvent(
@@ -108,6 +112,7 @@ fun HomePage(
                 amount = targetCurrencyDisplay.value,
                 currencyClickHandler = {
                     logic.onEvent(CurrencyConverterEvent.TargetCurrencyChangeRequested)
+                    navController.navigate(SELECTOR_PAGE)
                 },
                 textChangeHandler = {}, readonly = true
             )
