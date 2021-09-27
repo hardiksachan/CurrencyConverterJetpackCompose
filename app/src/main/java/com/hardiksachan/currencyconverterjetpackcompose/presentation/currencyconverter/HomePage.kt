@@ -1,5 +1,8 @@
 package com.hardiksachan.currencyconverterjetpackcompose.presentation.currencyconverter
 
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.ExperimentalAnimationApi
+import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.text.KeyboardActions
@@ -24,10 +27,12 @@ import com.hardiksachan.currencyconverterjetpackcompose.application.currencyconv
 import com.hardiksachan.currencyconverterjetpackcompose.application.currencyconverter.CurrencyConverterLogic
 import com.hardiksachan.currencyconverterjetpackcompose.application.currencyconverter.HomePageState
 import com.hardiksachan.currencyconverterjetpackcompose.domain.entity.Currency
+import com.hardiksachan.currencyconverterjetpackcompose.presentation.theme.Black
 import com.hardiksachan.currencyconverterjetpackcompose.presentation.theme.BlueDark
 import com.hardiksachan.currencyconverterjetpackcompose.presentation.theme.BlueLight
 import com.hardiksachan.currencyconverterjetpackcompose.presentation.util.noRippleClickable
 
+@ExperimentalAnimationApi
 @Composable
 fun HomePage(
     state: HomePageState,
@@ -41,6 +46,7 @@ fun HomePage(
     val targetCurrencyDisplay = state.targetCurrencyDisplay.collectAsState()
 
     val error = state.error.collectAsState()
+    val isLoading = state.isLoading.collectAsState()
 
     val scaffoldState = rememberScaffoldState(snackbarHostState = snackbarHostState)
 
@@ -49,16 +55,6 @@ fun HomePage(
     Scaffold(
         scaffoldState = scaffoldState,
         modifier = Modifier.fillMaxWidth(),
-        topBar = {
-            Text(
-                text = "hey there",
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = 16.dp)
-                    .padding(top = 16.dp),
-                style = MaterialTheme.typography.h4
-            )
-        },
         backgroundColor = MaterialTheme.colors.primarySurface
     ) {
         Column(
@@ -70,6 +66,16 @@ fun HomePage(
                     focusManager.clearFocus()
                 }
         ) {
+            Text(
+                text = "hey there",
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(16.dp),
+                style = MaterialTheme.typography.h4
+            )
+
+            Spacer(modifier = Modifier.height(8.dp))
+
             CurrencyCard(
                 currency = baseCurrency.value,
                 amount = baseCurrencyDisplay.value,
@@ -85,52 +91,15 @@ fun HomePage(
 
             Spacer(modifier = Modifier.height(8.dp))
 
-            Row(
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically,
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = 16.dp, vertical = 8.dp)
-            ) {
-                Button(
-                    onClick = {
-                        logic.onEvent(CurrencyConverterEvent.SwitchCurrenciesPressed)
-                    },
-                    elevation = ButtonDefaults.elevation(
-                        defaultElevation = 8.dp,
-                        pressedElevation = 16.dp,
-                        disabledElevation = 4.dp
-                    )
-                ) {
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.SpaceEvenly
-                    ) {
-                        Text(text = "Switch Currencies")
-                    }
-                }
-
-                Spacer(modifier = Modifier.width(8.dp))
-
-                Button(
-                    onClick = {
-                        focusManager.clearFocus()
-                        logic.onEvent(CurrencyConverterEvent.EvaluatePressed)
-                    },
-                    elevation = ButtonDefaults.elevation(
-                        defaultElevation = 8.dp,
-                        pressedElevation = 16.dp,
-                        disabledElevation = 4.dp
-                    )
-                ) {
-                    Icon(
-                        painter = rememberVectorPainter(Icons.Filled.Send),
-                        contentDescription = "Evaluate",
-                        modifier = Modifier.size(20.dp)
-                    )
-                }
-            }
-
+            MiddleSection(
+                onSwitchCurrenciesPressed = {
+                    logic.onEvent(CurrencyConverterEvent.SwitchCurrenciesPressed)
+                },
+                onEvaluatePressed = {
+                    logic.onEvent(CurrencyConverterEvent.EvaluatePressed)
+                },
+                modifier = Modifier.fillMaxWidth()
+            )
 
             Spacer(modifier = Modifier.height(8.dp))
 
@@ -151,8 +120,75 @@ fun HomePage(
                 )
             }
         }
+
+        AnimatedVisibility(visible = isLoading.value) {
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .background(Black.copy(alpha = .2f)),
+                contentAlignment = Alignment.Center
+            ) {
+                CircularProgressIndicator(color = BlueDark)
+            }
+        }
     }
 }
+
+@Composable
+fun MiddleSection(
+    onSwitchCurrenciesPressed: () -> Unit,
+    onEvaluatePressed: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+
+    val focusManager = LocalFocusManager.current
+
+    Row(
+        horizontalArrangement = Arrangement.SpaceBetween,
+        verticalAlignment = Alignment.CenterVertically,
+        modifier = modifier
+            .padding(horizontal = 16.dp, vertical = 8.dp)
+    ) {
+        Button(
+            onClick = {
+                onSwitchCurrenciesPressed()
+            },
+            elevation = ButtonDefaults.elevation(
+                defaultElevation = 8.dp,
+                pressedElevation = 16.dp,
+                disabledElevation = 4.dp
+            )
+        ) {
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.SpaceEvenly
+            ) {
+                Text(text = "Switch Currencies")
+            }
+        }
+
+        Spacer(modifier = Modifier.width(8.dp))
+
+        Button(
+            onClick = {
+                focusManager.clearFocus()
+                onEvaluatePressed()
+            },
+            elevation = ButtonDefaults.elevation(
+                defaultElevation = 8.dp,
+                pressedElevation = 16.dp,
+                disabledElevation = 4.dp
+            )
+        ) {
+            Icon(
+                painter = rememberVectorPainter(Icons.Filled.Send),
+                contentDescription = "Evaluate",
+                modifier = Modifier.size(20.dp)
+            )
+        }
+    }
+}
+
 
 @Composable
 fun CurrencyCard(
