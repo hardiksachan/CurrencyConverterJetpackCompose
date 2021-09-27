@@ -8,6 +8,7 @@ sealed class CurrencyConverterEvent {
     object BaseCurrencyChangeRequested : CurrencyConverterEvent()
     object TargetCurrencyChangeRequested : CurrencyConverterEvent()
     object PullToRefresh : CurrencyConverterEvent()
+    object OnStop: CurrencyConverterEvent()
     data class CurrencySelected(val currency: Currency) : CurrencyConverterEvent()
     data class SearchDisplayTextChanged(val newText: String) : CurrencyConverterEvent()
     data class BaseCurrencyDisplayTextChanged(val newText: String) : CurrencyConverterEvent()

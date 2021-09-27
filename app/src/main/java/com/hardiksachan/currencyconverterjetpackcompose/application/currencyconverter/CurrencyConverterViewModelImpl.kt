@@ -57,6 +57,7 @@ class CurrencyConverterViewModelImpl(
                 is CurrencyConverterEvent.SearchDisplayTextChanged -> handleSearchDisplayTextChanged(
                     event.newText
                 )
+                CurrencyConverterEvent.OnStop -> jobTracker.cancel()
             }
         }
     }

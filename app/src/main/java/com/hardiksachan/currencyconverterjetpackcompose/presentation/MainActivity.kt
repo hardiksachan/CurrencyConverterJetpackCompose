@@ -9,10 +9,7 @@ import androidx.lifecycle.lifecycleScope
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
-import com.hardiksachan.currencyconverterjetpackcompose.application.currencyconverter.CurrencyConverterEffect
-import com.hardiksachan.currencyconverterjetpackcompose.application.currencyconverter.CurrencyConverterLogic
-import com.hardiksachan.currencyconverterjetpackcompose.application.currencyconverter.CurrencySelectorPageState
-import com.hardiksachan.currencyconverterjetpackcompose.application.currencyconverter.HomePageState
+import com.hardiksachan.currencyconverterjetpackcompose.application.currencyconverter.*
 import com.hardiksachan.currencyconverterjetpackcompose.presentation.currencyconverter.CurrencySelectorPage
 import com.hardiksachan.currencyconverterjetpackcompose.presentation.currencyconverter.HomePage
 import com.hardiksachan.currencyconverterjetpackcompose.presentation.currencyconverter.di.viewModel
@@ -25,6 +22,8 @@ import kotlinx.coroutines.launch
 @ExperimentalAnimationApi
 class MainActivity : ComponentActivity() {
 
+    private lateinit var logic: CurrencyConverterLogic
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
@@ -32,7 +31,7 @@ class MainActivity : ComponentActivity() {
 
         val homePageState: HomePageState = viewModel
         val currencySelectorPageState: CurrencySelectorPageState = viewModel
-        val logic: CurrencyConverterLogic = viewModel
+        logic = viewModel
 
 
         setContent {
@@ -71,5 +70,10 @@ class MainActivity : ComponentActivity() {
                 }
             }
         }
+    }
+
+    override fun onStop() {
+        logic.onEvent(CurrencyConverterEvent.OnStop)
+        super.onStop()
     }
 }
